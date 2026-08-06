@@ -29,16 +29,22 @@ export interface ModeAssets {
   readonly evolve: VideoAsset;
 }
 
+function withBase(path: string): string {
+  const base = import.meta.env.BASE_URL || '/';
+  const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+  return base.endsWith('/') ? `${base}${cleanPath}` : `${base}/${cleanPath}`;
+}
+
 const POSTERS = {
-  intro: '/assets/images/intro-choice-poster.jpg',
-  forge: '/assets/images/forge-finale-poster.jpg',
-  evolve: '/assets/images/evolve-finale-poster.jpg',
+  intro: withBase('/assets/images/intro-choice-poster.jpg'),
+  forge: withBase('/assets/images/forge-finale-poster.jpg'),
+  evolve: withBase('/assets/images/evolve-finale-poster.jpg'),
 } as const;
 
 export const assetManifest: Record<MediaMode, ModeAssets> = {
   desktop: {
     intro: {
-      src: '/assets/video/desktop/clips/01-intro-choice.mp4',
+      src: withBase('/assets/video/desktop/clips/01-intro-choice.mp4'),
       poster: POSTERS.intro,
       duration: 10,
       width: 1920,
@@ -49,7 +55,7 @@ export const assetManifest: Record<MediaMode, ModeAssets> = {
     // Pre-joined 02a + 03a. Playing the combined file avoids a mid-story
     // source swap, which is where inter-scene hitching would otherwise appear.
     forge: {
-      src: '/assets/video/desktop/sequences/forge-path-sequence.mp4',
+      src: withBase('/assets/video/desktop/sequences/forge-path-sequence.mp4'),
       poster: POSTERS.forge,
       duration: 20,
       width: 1920,
@@ -59,7 +65,7 @@ export const assetManifest: Record<MediaMode, ModeAssets> = {
     },
     // Pre-joined 02b + 03b.
     evolve: {
-      src: '/assets/video/desktop/sequences/evolve-path-sequence.mp4',
+      src: withBase('/assets/video/desktop/sequences/evolve-path-sequence.mp4'),
       poster: POSTERS.evolve,
       duration: 20,
       width: 1920,
@@ -70,7 +76,7 @@ export const assetManifest: Record<MediaMode, ModeAssets> = {
   },
   mobile: {
     intro: {
-      src: '/assets/video/mobile/01-intro-choice-mobile.mp4',
+      src: withBase('/assets/video/mobile/01-intro-choice-mobile.mp4'),
       poster: POSTERS.intro,
       duration: 10,
       width: 1280,
@@ -79,7 +85,7 @@ export const assetManifest: Record<MediaMode, ModeAssets> = {
       frames: 240,
     },
     forge: {
-      src: '/assets/video/mobile/forge-path-sequence-mobile.mp4',
+      src: withBase('/assets/video/mobile/forge-path-sequence-mobile.mp4'),
       poster: POSTERS.forge,
       duration: 20,
       width: 1280,
@@ -88,7 +94,7 @@ export const assetManifest: Record<MediaMode, ModeAssets> = {
       frames: 480,
     },
     evolve: {
-      src: '/assets/video/mobile/evolve-path-sequence-mobile.mp4',
+      src: withBase('/assets/video/mobile/evolve-path-sequence-mobile.mp4'),
       poster: POSTERS.evolve,
       duration: 20,
       width: 1280,

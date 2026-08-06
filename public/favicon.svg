@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="BRIXCORE">
+  <rect width="64" height="64" rx="12" fill="#000"/>
+  <g fill="none" stroke-width="3" stroke-linejoin="round">
+    <path d="M10 30h18v18H10z" fill="#f2913c" fill-opacity=".18" stroke="#f2913c"/>
+    <path d="M14 26h4v4h-4zM22 26h4v4h-4z" fill="#f2913c" stroke="#f2913c"/>
+    <path d="M36 16h18v18H36z" fill="#4fc6e4" fill-opacity=".18" stroke="#4fc6e4"/>
+    <path d="M40 12h4v4h-4zM48 12h4v4h-4z" fill="#4fc6e4" stroke="#4fc6e4"/>
+  </g>
+</svg>

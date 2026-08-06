@@ -1,0 +1,350 @@
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity var(--dur-ui) var(--ease-out),
+    visibility 0s linear var(--dur-ui);
+}
+
+/*
+ * A short delay on the way in only, so the intro's final frame lands before the
+ * UI arrives over it. On the way out the overlay leaves immediately.
+ */
+.overlayVisible {
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity var(--dur-ui) var(--ease-out) var(--delay-ui),
+    visibility 0s;
+}
+
+.overlayVisible .prompt,
+.overlayVisible .choice {
+  transition-delay: var(--delay-ui);
+}
+
+/*
+ * Shares the film's geometry, so the percentages below are percentages of the
+ * image and the labels stay welded to their bricks at any viewport ratio.
+ */
+.geometry {
+  composes: frame from '../styles/filmFrame.module.css';
+  pointer-events: none;
+}
+
+/* ------------------------------------------------------------------ prompt */
+
+.prompt {
+  position: absolute;
+  left: 50%;
+  top: 21%;
+  translate: -50% 0;
+  margin: 0;
+  text-align: center;
+  white-space: nowrap;
+  transition: translate var(--dur-ui) var(--ease-out);
+}
+
+.overlay:not(.overlayVisible) .prompt {
+  translate: -50% 12px;
+}
+
+.promptText {
+  display: block;
+  font-size: clamp(0.78rem, 1.3vw, 1.12rem);
+  font-weight: 500;
+  letter-spacing: 0.42em;
+  /* Optical correction for the trailing letter-space. */
+  text-indent: 0.42em;
+  color: var(--ink);
+}
+
+.promptRule {
+  display: block;
+  width: clamp(48px, 6vw, 96px);
+  height: 1px;
+  margin: 1.15em auto 0;
+  background: linear-gradient(90deg, transparent, var(--hairline-strong), transparent);
+}
+
+/* ----------------------------------------------------------------- choices */
+
+.choice {
+  position: absolute;
+  /* --x / --y come from BRICK_ANCHORS, in film-image percentages. */
+  left: var(--x);
+  top: var(--y);
+  translate: -50% -50%;
+  pointer-events: auto;
+
+  display: grid;
+  justify-items: center;
+  gap: 0.5em;
+  padding: 0.85em 1.65em 0.95em;
+  /*
+   * A percentage of the film frame, so both cards come out identical even
+   * though "FORGE" and "EVOLVE" are different lengths. Content-sized boxes
+   * would leave the pair visibly lopsided.
+   */
+  min-width: 12.5%;
+  min-height: 44px;
+
+  color: var(--ink);
+  transition:
+    translate var(--dur-hover) var(--ease-out),
+    opacity var(--dur-hover) var(--ease-out);
+}
+
+.overlay:not(.overlayVisible) .choice {
+  translate: -50% calc(-50% + 14px);
+}
+
+/* Drawn frame rather than a glowing slab. */
+.choiceFrame {
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--hairline);
+  border-radius: 2px;
+  background: rgba(0, 0, 0, 0.3);
+  transition:
+    border-color var(--dur-hover) var(--ease-out),
+    background-color var(--dur-hover) var(--ease-out),
+    box-shadow var(--dur-hover) var(--ease-out);
+}
+
+/* Hairline tying each label back up to its brick. */
+.choiceTether {
+  position: absolute;
+  left: 50%;
+  bottom: 100%;
+  width: 1px;
+  height: 3.2vh;
+  background: linear-gradient(180deg, transparent, var(--accent));
+  opacity: 0.45;
+  transition: opacity var(--dur-hover) var(--ease-out);
+}
+
+.choiceLabel {
+  position: relative;
+  font-size: clamp(1rem, 1.85vw, 1.55rem);
+  font-weight: 600;
+  letter-spacing: 0.26em;
+  text-indent: 0.26em;
+  line-height: 1;
+  transition: color var(--dur-hover) var(--ease-out);
+}
+
+.choiceTagline {
+  position: relative;
+  font-size: clamp(0.55rem, 0.68vw, 0.7rem);
+  font-weight: 400;
+  letter-spacing: 0.2em;
+  text-indent: 0.2em;
+  line-height: 1;
+  color: var(--ink-dim);
+  transition: color var(--dur-hover) var(--ease-out);
+}
+
+/* --accent / --accent-rgb are set per core from the component. */
+.choice:hover .choiceFrame,
+.choice:focus-visible .choiceFrame {
+  border-color: rgba(var(--accent-rgb), 0.55);
+  background: rgba(var(--accent-rgb), 0.09);
+  /* One soft outer glow and a hairline inner lift — restrained on purpose. */
+  box-shadow:
+    0 0 22px -6px rgba(var(--accent-rgb), 0.45),
+    inset 0 0 0 1px rgba(var(--accent-rgb), 0.12);
+}
+
+.choice:hover .choiceLabel,
+.choice:focus-visible .choiceLabel {
+  color: var(--accent);
+}
+
+.choice:hover .choiceTagline,
+.choice:focus-visible .choiceTagline {
+  color: var(--ink);
+}
+
+.choice:hover .choiceTether,
+.choice:focus-visible .choiceTether {
+  opacity: 1;
+}
+
+.choice:active {
+  translate: -50% calc(-50% + 1px);
+}
+
+.choice:disabled {
+  cursor: default;
+}
+
+/* ------------------------------------------------------ portrait / narrow */
+
+/*
+ * Below 4:3 the stage letterboxes, leaving a band of black under the film. The
+ * choice UI moves down there instead of sitting on the image: larger touch
+ * targets, nothing covering the bricks, and the tether is dropped because the
+ * label is no longer adjacent to its brick.
+ *
+ * Anchored to the viewport bottom rather than to the film edge, so it stays put
+ * regardless of how tall the letterbox band happens to be.
+ */
+@media (max-aspect-ratio: 4 / 3) {
+  /*
+   * Scoped through `.overlay` on purpose. `.geometry` composes `.frame`, and the
+   * shared module is emitted after this one, so at equal specificity the frame's
+   * own rules would win and this override would silently do nothing.
+   */
+  .overlay .geometry {
+    /* Take over the whole viewport instead of just the film box. */
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    aspect-ratio: auto;
+    translate: none;
+  }
+
+  /*
+   * The UI sits inside the lower letterbox band. `7vh` rather than a fixed
+   * offset centres the group in that band instead of pinning it to the very
+   * bottom edge, which read as two clusters at opposite ends of the screen.
+   * 106px is the prompt block plus its gap above the buttons.
+   */
+  .prompt {
+    top: auto;
+    bottom: calc(var(--safe-b) + 7vh + 106px);
+  }
+
+  .promptText {
+    font-size: 0.8rem;
+  }
+
+  .choices {
+    position: absolute;
+    left: 50%;
+    bottom: calc(var(--safe-b) + 7vh);
+    translate: -50% 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    width: min(460px, calc(100vw - 36px));
+  }
+
+  .choice {
+    /* `relative`, not `static`: .choiceFrame is absolutely positioned against
+       this element, and letting it escape to the overlay would draw one box
+       across both buttons instead of one box each. */
+    position: relative;
+    left: auto;
+    top: auto;
+    translate: none;
+    min-height: 78px;
+    padding: 1.05em 0.75em;
+    gap: 0.6em;
+  }
+
+  .overlay:not(.overlayVisible) .choice {
+    translate: 0 14px;
+  }
+
+  .choice:active {
+    translate: 0 1px;
+  }
+
+  .choiceTether {
+    display: none;
+  }
+
+  .choiceLabel {
+    font-size: 1.12rem;
+    letter-spacing: 0.22em;
+    text-indent: 0.22em;
+  }
+
+  .choiceTagline {
+    font-size: 0.56rem;
+  }
+}
+
+/*
+ * Any short viewport, whichever branch it landed in: shrink the chrome so the
+ * UI cannot grow tall enough to reach up over the bricks.
+ */
+@media (max-height: 480px) {
+  .choice {
+    min-height: 56px;
+    padding: 0.6em 1em 0.7em;
+    gap: 0.35em;
+  }
+
+  .choiceLabel {
+    font-size: 0.95rem;
+  }
+
+  .choiceTagline {
+    font-size: 0.5rem;
+  }
+}
+
+/* Short *and* narrow: tighten the offsets too, so the UI stays clear of the bricks. */
+@media (max-aspect-ratio: 4 / 3) and (max-height: 480px) {
+  .prompt {
+    bottom: calc(var(--safe-b) + 4vh + 78px);
+  }
+
+  .choices {
+    bottom: calc(var(--safe-b) + 4vh);
+  }
+}
+
+/* Short landscape phones: keep the brick anchoring, shrink the chrome. */
+@media (min-aspect-ratio: 4 / 3) and (max-height: 460px) {
+  .prompt {
+    top: 13%;
+  }
+
+  .promptRule {
+    margin-top: 0.7em;
+  }
+
+  .choice {
+    padding: 0.6em 1.15em 0.7em;
+    gap: 0.35em;
+  }
+
+  .choiceLabel {
+    font-size: 0.95rem;
+  }
+
+  .choiceTagline {
+    font-size: 0.5rem;
+  }
+}
+
+/* Touch devices get no hover styling, only the active/focus treatment. */
+@media (hover: none) {
+  .choice:hover .choiceFrame {
+    border-color: var(--hairline);
+    background: rgba(0, 0, 0, 0.3);
+    box-shadow: none;
+  }
+
+  .choice:hover .choiceLabel {
+    color: var(--ink);
+  }
+
+  .choice:active .choiceFrame {
+    border-color: rgba(var(--accent-rgb), 0.6);
+    background: rgba(var(--accent-rgb), 0.12);
+  }
+
+  .choice:active .choiceLabel {
+    color: var(--accent);
+  }
+}

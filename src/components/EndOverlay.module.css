@@ -1,0 +1,195 @@
+/*
+ * A lower third, anchored to the viewport.
+ *
+ * Both finale objects are centred and vertically tall (roughly 15%–83% of the
+ * frame) with empty black to the left and right, so the only region that is
+ * reliably clear at every viewport ratio — including ultrawide, where the film
+ * is cropped top and bottom — is the very bottom. A soft scrim makes the band
+ * read as a deliberate title card rather than as UI dropped on top of the film.
+ */
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity var(--dur-ui) var(--ease-out),
+    visibility 0s linear var(--dur-ui);
+}
+
+/* Delayed on the way in so the finale frame reads before the controls arrive. */
+.overlayVisible {
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity var(--dur-ui) var(--ease-out) var(--delay-ui),
+    visibility 0s;
+}
+
+.overlayVisible .content {
+  transition-delay: var(--delay-ui);
+}
+
+.scrim {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 46%;
+  pointer-events: none;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.92) 0%,
+    rgba(0, 0, 0, 0.72) 34%,
+    rgba(0, 0, 0, 0.32) 66%,
+    transparent 100%
+  );
+}
+
+.content {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: clamp(18px, 2.6vh, 32px);
+  padding-bottom: calc(var(--safe-b) + clamp(28px, 5vh, 56px));
+  text-align: center;
+  transition: translate var(--dur-ui) var(--ease-out);
+}
+
+.overlay:not(.overlayVisible) .content {
+  translate: 0 16px;
+}
+
+/* ---------------------------------------------------------------- headline */
+
+.headline {
+  margin: 0;
+  font-size: clamp(1.15rem, 2.6vw, 2.1rem);
+  font-weight: 600;
+  letter-spacing: 0.3em;
+  text-indent: 0.3em;
+  line-height: 1.1;
+  color: var(--ink);
+}
+
+.headlineRule {
+  display: block;
+  width: clamp(56px, 7vw, 112px);
+  height: 1px;
+  margin: 0.85em auto 0;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  opacity: 0.85;
+}
+
+/* ----------------------------------------------------------------- actions */
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: clamp(10px, 1.4vw, 18px);
+  pointer-events: auto;
+}
+
+.action {
+  position: relative;
+  min-height: 46px;
+  padding: 0.95em 1.9em;
+  border: 1px solid var(--hairline);
+  border-radius: 2px;
+  background: rgba(0, 0, 0, 0.34);
+  color: var(--ink-dim);
+  font-size: clamp(0.6rem, 0.78vw, 0.76rem);
+  font-weight: 500;
+  letter-spacing: 0.24em;
+  text-indent: 0.24em;
+  line-height: 1;
+  transition:
+    color var(--dur-hover) var(--ease-out),
+    border-color var(--dur-hover) var(--ease-out),
+    background-color var(--dur-hover) var(--ease-out),
+    box-shadow var(--dur-hover) var(--ease-out);
+}
+
+.action:hover,
+.action:focus-visible {
+  color: var(--ink);
+  border-color: var(--hairline-strong);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* The primary action carries the branch accent; the secondary stays neutral. */
+.actionPrimary:hover,
+.actionPrimary:focus-visible {
+  color: var(--accent);
+  border-color: rgba(var(--accent-rgb), 0.5);
+  background: rgba(var(--accent-rgb), 0.08);
+  box-shadow: 0 0 20px -6px rgba(var(--accent-rgb), 0.4);
+}
+
+.action:active {
+  translate: 0 1px;
+}
+
+/* ------------------------------------------------------------------ mobile */
+
+@media (max-aspect-ratio: 4 / 3) {
+  .content {
+    gap: 20px;
+    padding-bottom: calc(var(--safe-b) + 28px);
+    width: min(460px, calc(100vw - 36px));
+  }
+
+  .headline {
+    font-size: 1.1rem;
+    letter-spacing: 0.24em;
+    text-indent: 0.24em;
+  }
+
+  .actions {
+    display: grid;
+    width: 100%;
+    gap: 12px;
+  }
+
+  .action {
+    min-height: 52px;
+    padding: 1em 1.2em;
+    font-size: 0.66rem;
+  }
+}
+
+@media (min-aspect-ratio: 4 / 3) and (max-height: 460px) {
+  .content {
+    gap: 14px;
+    padding-bottom: calc(var(--safe-b) + 18px);
+  }
+
+  .headline {
+    font-size: 1rem;
+  }
+
+  .action {
+    min-height: 42px;
+    padding: 0.7em 1.4em;
+    font-size: 0.58rem;
+  }
+}
+
+@media (hover: none) {
+  .action:hover {
+    color: var(--ink-dim);
+    border-color: var(--hairline);
+    background: rgba(0, 0, 0, 0.34);
+    box-shadow: none;
+  }
+
+  .action:active {
+    color: var(--ink);
+    background: rgba(255, 255, 255, 0.08);
+  }
+}

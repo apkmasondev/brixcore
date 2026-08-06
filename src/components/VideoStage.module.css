@@ -1,0 +1,47 @@
+.stage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #000;
+}
+
+.layer {
+  composes: frame from '../styles/filmFrame.module.css';
+  opacity: 0;
+  transition: opacity var(--dur-fade) var(--ease-io);
+  will-change: opacity;
+}
+
+.layerActive {
+  opacity: 1;
+}
+
+.video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* The element already carries the film's aspect ratio; this only guards
+     against a browser reporting slightly different intrinsic dimensions. */
+  object-fit: cover;
+  background: #000;
+  /* Keeps iOS from promoting the element to its native fullscreen player. */
+  pointer-events: none;
+}
+
+/*
+ * A slight vignette anchored to the viewport rather than the film. It deepens
+ * the edges without touching the centre, and stops the letterbox seam in
+ * portrait from reading as a hard line. One gradient — no filter, no
+ * backdrop-filter, nothing that would cost a composite pass over the video.
+ */
+.vignette {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 120% 100% at 50% 50%,
+    transparent 55%,
+    rgba(0, 0, 0, 0.55) 100%
+  );
+}

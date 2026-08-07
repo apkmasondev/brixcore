@@ -36,6 +36,7 @@ src/
   config/
     assetManifest.ts      every media URL + its verified duration/fps/frames
     experienceConfig.ts   copy, timings, breakpoint, brick anchors
+    projectDossier.ts     the informational layer's copy and figures
   hooks/
     useChoiceFlow.ts      the state machine (reducer)
     useMediaMode.ts       desktop vs mobile media set, data-constrained detection
@@ -46,6 +47,7 @@ src/
     VideoStage.tsx          the three video layers and the cross-fade
     ChoiceOverlay.tsx       CHOOSE YOUR CORE + the two brick-anchored buttons
     EndOverlay.tsx          finale line + CHOOSE ANOTHER CORE / REPLAY FROM START
+    InfoPanel.tsx           the project dossier, opened from the end screen
     LoadingOverlay.tsx      the discreet loader
     PosterFallback.tsx      error and autoplay-blocked screens
     SoundToggle.tsx         optional ambient audio
@@ -76,6 +78,11 @@ error  ← any failure, → retry
 intro is never re-watched. `REPLAY FROM START` bumps `introRunId` and resets
 everything.
 
+`seenCores` is the one piece of state that only ever grows — `replay` and `retry`
+deliberately leave it alone. Having watched a path is a fact about the viewer,
+not about the current run, and making them earn it back would read as a
+punishment for pressing replay.
+
 Guards live in the reducer, so a second click on a choice cannot change the
 branch — `choose` is ignored unless the phase is exactly `choice-ready`.
 
@@ -101,6 +108,69 @@ The hand-off has no black frame in it: during `branch-loading` the **intro**
 layer stays visible on its final frame, and the branch only becomes visible once
 it is genuinely playing. The branch sequences happen to open on the same brick
 composition the intro ends on, so the 420 ms cross-fade is essentially invisible.
+
+## The ending
+
+The end screen is staged rather than presented all at once.
+
+**Two beats.** The finale line arrives with the overlay, on the film's held last
+frame. The controls hold back a further 900 ms and fade in under it over 520 ms.
+A line and a row of buttons appearing together reads as a menu; the same two
+beats apart reads as an ending followed by an offer. Measured in the browser:
+the controls sit at opacity 0 for the first ~1.2 s, then resolve by ~1.8 s.
+
+**The road not taken.** Under the finale, one quiet line naming the core that was
+left behind — `THE EVOLVE CORE IS STILL UNBUILT` — in *that* core's accent. The
+thing you did not build should not be wearing the colour of the thing you did.
+It turns `CHOOSE ANOTHER CORE` from an item in a menu into unfinished business.
+
+**Both cores seen.** Once every path has been watched through, the end screen
+changes without a word of explanation:
+
+| | First path | Both seen |
+|---|---|---|
+| Headline | the path's own finale | *unchanged* — never taken away |
+| Subline | the other core, still unbuilt | `SAME BRICKS. BOTH FUTURES.` |
+| Rule | one accent, `clamp(56px, 7vw, 112px)` | both accents, widened |
+| Primary action | `CHOOSE ANOTHER CORE` | `RETURN TO THE CORES` |
+| Brand mark | 75% opacity | full, with a halo in both accents |
+
+The headline staying put is the point: each path's finale is the payoff of the
+sequence just watched, so the completion state sits *under* it rather than
+replacing it. Watch FORGE then EVOLVE and you still get `BUILD WHAT COMES NEXT`.
+
+The primary action is relabelled rather than removed. `CHOOSE ANOTHER CORE` is
+the fast way back to the held intro frame; dropping it would have made
+re-watching a path cost a full intro replay, which is a real loss for a
+ceremonial gain.
+
+## The project dossier
+
+The informational layer lives behind the film rather than beside it. There is no
+"about" link on the choice screen and none during playback — the only way in is
+`ABOUT THIS PROJECT` on an end screen, after a path has actually been watched.
+
+It is a tertiary text link, not a third button: two framed actions plus a quiet
+line reads as a hierarchy, three framed actions reads as a menu.
+
+Five sections — concept, the experience, the making, the build, desktop &
+mobile — each with prose and a table of the hard numbers. Every figure in it is
+a real measurement from this build (`docs/media-report.md`, `assetManifest.ts`,
+`experienceConfig.ts`) rather than a rounded claim.
+
+`InfoPanel` is a real modal: it takes focus, traps `Tab`, closes on `Escape` or
+`CLOSE`, and hands focus back to the trigger. The scroll region takes focus on
+open so arrows and Page Down work without tabbing first, and `overscroll-behavior:
+contain` keeps a flick at either end from reaching the document.
+
+The backdrop is opaque rather than a scrim. Finale frames average dark but carry
+a lit object and near-white type: at 0.96 the headline underneath ghosted
+through the body copy, and at 0.988 it was still legible. Depth comes from a
+single radial halo in the accent of the path just watched — which also carries
+that path's colour through the whole panel.
+
+Copy lives in `config/projectDossier.ts`, following the same rule as everything
+else: nothing user-visible is hard-coded in a component.
 
 ## Aligning the UI to the bricks
 
@@ -167,8 +237,14 @@ screen rather than an endless spinner.
 
 - Real `<button>` elements with descriptive `aria-label`s
   ("Choose FORGE — built from fire").
-- Focus moves to the first choice when the choice appears, and to the primary
-  action when an end screen or error appears.
+- Focus moves to the choice *group* when the choice appears, and to the primary
+  action when an end screen or error appears. The group rather than the first
+  button on purpose: Chromium treats a programmatic focus as keyboard-initiated
+  until the user has clicked, so focusing the button directly matched
+  `:focus-visible` on a fresh load and lit FORGE up as though it were hovered.
+  The group is unstyled, announces its label, and puts the next `Tab` on FORGE.
+- The dossier is a modal — focus trap, `Escape` to close, focus returned to the
+  trigger.
 - One consistent `:focus-visible` ring.
 - Hidden overlays disable their buttons, so nothing focusable is ever left inside
   an `aria-hidden` subtree.
@@ -214,4 +290,11 @@ does not render and no request is made. Point it at a file in
 
 `assets/` was moved to `public/assets/` so Vite serves and ships it unprocessed.
 The URLs are unchanged (`/assets/video/desktop/clips/01-intro-choice.mp4`), and
-the ~100 MB of video is copied, not bundled.
+the video is copied, not bundled.
+
+Because `public/` ships verbatim, anything left in it is shipped whether or not
+the app asks for it. The four source clips behind the joined branch sequences
+(`02a`, `02b`, `03a`, `03b`) were never requested at runtime but were being
+copied into every build — 33 MB — so they were removed once
+[docs/media-report.md](docs/media-report.md) had verified the concatenations
+against them. They remain in git history at `b69e3c4`.

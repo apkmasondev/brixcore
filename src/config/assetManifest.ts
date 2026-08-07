@@ -52,8 +52,14 @@ export const assetManifest: Record<MediaMode, ModeAssets> = {
       fps: 24,
       frames: 240,
     },
-    // Pre-joined 02a + 03a. Playing the combined file avoids a mid-story
-    // source swap, which is where inter-scene hitching would otherwise appear.
+    // Pre-joined from the 02a + 03a source clips, which is why they are no
+    // longer in the repo — `public/` ships verbatim, and 33 MB that nothing
+    // ever requests was 33 MB of dead weight in every build. See
+    // `docs/media-report.md` for the concatenation check, and git history
+    // (commit b69e3c4) if the sources are ever needed again.
+    //
+    // Playing the combined file avoids a mid-story source swap, which is where
+    // inter-scene hitching would otherwise appear.
     forge: {
       src: withBase('/assets/video/desktop/sequences/forge-path-sequence.mp4'),
       poster: POSTERS.forge,

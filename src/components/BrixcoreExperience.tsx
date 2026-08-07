@@ -6,6 +6,7 @@ import { useMediaMode } from '../hooks/useMediaMode';
 import { useVideoPreload, type LayerKey } from '../hooks/useVideoPreload';
 import { ChoiceOverlay } from './ChoiceOverlay';
 import { EndOverlay } from './EndOverlay';
+import { InfoPanel } from './InfoPanel';
 import { LoadingOverlay } from './LoadingOverlay';
 import { PosterFallback } from './PosterFallback';
 import { SoundToggle } from './SoundToggle';
@@ -24,6 +25,9 @@ const MOTION_VARS = {
   '--dur-fade': `${TIMING.layerFade}ms`,
   '--dur-ui': `${TIMING.uiReveal}ms`,
   '--delay-ui': `${TIMING.uiRevealDelay}ms`,
+  '--delay-end': `${TIMING.endActionsDelay}ms`,
+  '--dur-end': `${TIMING.endActionsReveal}ms`,
+  '--dur-panel': `${TIMING.panelReveal}ms`,
 } as CSSProperties;
 
 /**
@@ -47,8 +51,16 @@ function safePlay(el: HTMLVideoElement): Promise<'ok' | 'blocked'> {
 export function BrixcoreExperience() {
   const { mode, isDataConstrained } = useMediaMode();
   const assets = useMemo(() => getModeAssets(mode), [mode]);
-  const { state, dispatch, activeLayer, isChoiceVisible, isEndVisible, endedCore, actions } =
-    useChoiceFlow();
+  const {
+    state,
+    dispatch,
+    activeLayer,
+    isChoiceVisible,
+    isEndVisible,
+    endedCore,
+    bothCoresSeen,
+    actions,
+  } = useChoiceFlow();
   const { readiness, register, markReady, getElement, requestPreload, resetPreloads } =
     useVideoPreload();
 
@@ -275,6 +287,20 @@ export function BrixcoreExperience() {
     return () => window.clearTimeout(timer);
   }, [phase, branchRunId, dispatch]);
 
+  /* -------------------------------------------------------------- dossier */
+
+  // The informational layer is reachable only from an end screen, so it is not
+  // part of the flow reducer — nothing about it can change which video plays.
+  const [dossierOpen, setDossierOpen] = useState(false);
+  const openDossier = useCallback(() => setDossierOpen(true), []);
+  const closeDossier = useCallback(() => setDossierOpen(false), []);
+
+  // Belt and braces: the panel covers its own trigger, so in practice the flow
+  // cannot move while it is open — but if it ever does, the panel goes with it.
+  useEffect(() => {
+    if (!isEndVisible) setDossierOpen(false);
+  }, [isEndVisible]);
+
   /* -------------------------------------------------------------- render */
 
   const fallbackPoster =
@@ -303,7 +329,11 @@ export function BrixcoreExperience() {
       />
 
       <p className={styles.brand} aria-hidden="true">
-        <span className={styles.brandMark} />
+        {/* Lights fully once both paths have been watched — the only persistent
+            trace the experience keeps of how far the viewer has got. */}
+        <span
+          className={`${styles.brandMark} ${bothCoresSeen ? styles.brandMarkComplete : ''}`}
+        />
         {COPY.brand}
       </p>
 
@@ -316,9 +346,13 @@ export function BrixcoreExperience() {
       <EndOverlay
         visible={isEndVisible}
         core={endedCore}
+        bothCoresSeen={bothCoresSeen}
         onChooseAnother={actions.chooseAnother}
         onReplay={actions.replay}
+        onAbout={openDossier}
       />
+
+      <InfoPanel visible={dossierOpen} core={endedCore} onClose={closeDossier} />
 
       <LoadingOverlay
         visible={loaderVisible}

@@ -20,15 +20,22 @@ export const ChoiceOverlay = memo(function ChoiceOverlay({
   locked,
   onChoose,
 }: ChoiceOverlayProps) {
-  const firstChoiceRef = useRef<HTMLButtonElement | null>(null);
+  const choicesRef = useRef<HTMLDivElement | null>(null);
   const wasVisible = useRef(false);
 
-  // Move focus onto the choice the moment it becomes available, so keyboard
-  // users are not left hunting for it — but only on the transition into
-  // visibility, never on every render.
+  // Move focus onto the choice group the moment it becomes available, so
+  // keyboard users are not left hunting for it — but only on the transition
+  // into visibility, never on every render.
+  //
+  // The *group* rather than the first button on purpose. Chrome treats a
+  // programmatic focus as keyboard-initiated whenever the user has not clicked
+  // yet, so focusing the button directly matched `:focus-visible` on a fresh
+  // load and lit FORGE up as though it were hovered until the first click
+  // landed somewhere. The group is unstyled, announces its label to screen
+  // readers, and puts the very next Tab on FORGE.
   useEffect(() => {
     if (visible && !wasVisible.current) {
-      firstChoiceRef.current?.focus({ preventScroll: true });
+      choicesRef.current?.focus({ preventScroll: true });
     }
     wasVisible.current = visible;
   }, [visible]);
@@ -47,8 +54,14 @@ export const ChoiceOverlay = memo(function ChoiceOverlay({
           <span className={styles.promptRule} aria-hidden="true" />
         </p>
 
-        <div className={styles.choices} role="group" aria-label={COPY.choicePrompt}>
-          {CORE_ORDER.map((core, index) => {
+        <div
+          ref={choicesRef}
+          className={styles.choices}
+          role="group"
+          aria-label={COPY.choicePrompt}
+          tabIndex={-1}
+        >
+          {CORE_ORDER.map((core) => {
             const copy = COPY.cores[core];
             const anchor = BRICK_ANCHORS[core];
             const accent = ACCENTS[core];
@@ -56,7 +69,6 @@ export const ChoiceOverlay = memo(function ChoiceOverlay({
             return (
               <button
                 key={core}
-                ref={index === 0 ? firstChoiceRef : undefined}
                 type="button"
                 className={styles.choice}
                 style={

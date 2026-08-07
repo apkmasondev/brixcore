@@ -52,6 +52,21 @@
   /* Two-tone tick reading as a stacked pair of bricks. */
   background: linear-gradient(135deg, var(--forge) 0 50%, var(--evolve) 50% 100%);
   opacity: 0.75;
+  transition:
+    opacity var(--dur-ui) var(--ease-out),
+    box-shadow var(--dur-ui) var(--ease-out);
+}
+
+/*
+ * Both cores watched. Deliberately the whole reward: no badge, no counter, no
+ * toast — the mark the brand already carries simply comes up to full and picks
+ * up a halo in both accents.
+ */
+.brandMarkComplete {
+  opacity: 1;
+  box-shadow:
+    -3px -3px 12px -3px rgba(var(--forge-rgb), 0.75),
+    3px 3px 12px -3px rgba(var(--evolve-rgb), 0.75);
 }
 
 @media (max-aspect-ratio: 4 / 3) {

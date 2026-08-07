@@ -18,15 +18,20 @@
     Arial, sans-serif;
 
   /*
-   * Motion. --dur-fade / --dur-ui / --delay-ui are overwritten at runtime from
-   * TIMING in experienceConfig.ts; the values here are the fallbacks that apply
-   * before React mounts. All are forced to ~0 under prefers-reduced-motion.
+   * Motion. Everything from --dur-fade down to --dur-panel is overwritten at
+   * runtime from TIMING in experienceConfig.ts; the values here are the
+   * fallbacks that apply before React mounts. All are forced to ~0 under
+   * prefers-reduced-motion, which also collapses the end screen's two beats
+   * into one.
    */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-io: cubic-bezier(0.65, 0, 0.35, 1);
   --dur-fade: 420ms;
   --dur-ui: 900ms;
   --delay-ui: 300ms;
+  --delay-end: 900ms;
+  --dur-end: 520ms;
+  --dur-panel: 560ms;
   --dur-hover: 320ms;
 
   --safe-b: env(safe-area-inset-bottom, 0px);

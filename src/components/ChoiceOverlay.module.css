@@ -73,6 +73,17 @@
 
 /* ----------------------------------------------------------------- choices */
 
+/*
+ * The group takes focus when the overlay opens (see ChoiceOverlay.tsx) purely as
+ * a landing spot for the next Tab — it must never draw the global focus ring
+ * around the whole pair. Specificity is 0,2,0 so it beats the `:focus-visible`
+ * rule in global.css regardless of stylesheet order.
+ */
+.choices:focus,
+.choices:focus-visible {
+  outline: none;
+}
+
 .choice {
   position: absolute;
   /* --x / --y come from BRICK_ANCHORS, in film-image percentages. */

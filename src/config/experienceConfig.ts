@@ -63,10 +63,28 @@ export const TIMING = {
   /** Beat before overlay UI appears, so the film's last frame reads first. */
   uiRevealDelay: 300,
   /**
+   * Beat between the finale line landing and the controls arriving under it.
+   * The ending is the one moment worth staging: a line and a row of buttons
+   * appearing together reads as a menu, the same two beats apart reads as an
+   * ending followed by an offer.
+   */
+  endActionsDelay: 900,
+  /**
+   * The controls' own fade. Quicker than `uiReveal`, which is paced to a held
+   * film frame — by the time the controls arrive that frame has already read.
+   */
+  endActionsReveal: 520,
+  /**
    * A branch that becomes playable faster than this never shows a loader —
    * a spinner that flashes for 100 ms looks worse than no spinner at all.
    */
   loaderGrace: 350,
+  /**
+   * Dossier open/close. Deliberately quicker than `uiReveal`: the overlay
+   * reveals are paced to a film's last frame, but a panel the user asked for
+   * should arrive as fast as it can without snapping.
+   */
+  panelReveal: 560,
 } as const;
 
 /* ---------------------------------------------------------------- preloading */
@@ -98,17 +116,37 @@ export const COPY = {
       tagline: 'BUILT FROM FIRE',
       ariaLabel: 'Choose FORGE — built from fire',
       finale: 'BUILT TO COMMAND',
+      /** Shown after the *other* path ends, naming what was left behind. */
+      unbuilt: 'THE FORGE CORE IS STILL UNBUILT',
     },
     evolve: {
       label: 'EVOLVE',
       tagline: 'BUILT FOR TOMORROW',
       ariaLabel: 'Choose EVOLVE — built for tomorrow',
       finale: 'BUILD WHAT COMES NEXT',
+      unbuilt: 'THE EVOLVE CORE IS STILL UNBUILT',
     },
   },
 
+  /**
+   * Replaces the `unbuilt` line once both paths have been watched. It sits
+   * under the path's own finale rather than replacing it — that line is the
+   * payoff of the sequence just watched and is never taken away.
+   */
+  bothCoresLine: 'SAME BRICKS. BOTH FUTURES.',
+
   endChooseAnother: 'CHOOSE ANOTHER CORE',
+  /** Same action, honest wording once there is no core left unseen. */
+  endReturn: 'RETURN TO THE CORES',
   endReplay: 'REPLAY FROM START',
+  /** Tertiary, quieter than the two actions above — it opens the dossier. */
+  endAbout: 'ABOUT THIS PROJECT',
+
+  dossierOpenAria: 'About this project — concept, process and build',
+  dossierClose: 'CLOSE',
+  /** Only shown where a physical keyboard is likely. */
+  dossierCloseHint: 'ESC',
+  dossierCloseAria: 'Close the project dossier',
 
   loading: 'PREPARING',
   loadingBranch: 'ASSEMBLING',

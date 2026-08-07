@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useReducer } from 'react';
 import type { CoreId } from '../config/assetManifest';
+import { CORE_ORDER } from '../config/experienceConfig';
 
 /** The complete set of positions the experience can be in. */
 export type FlowPhase =
@@ -22,6 +23,14 @@ export interface FlowState {
   readonly selectedCore: CoreId | null;
   /** Cores whose media has been requested. Drives each element's `preload`. */
   readonly requestedCores: readonly CoreId[];
+  /**
+   * Cores whose sequence has been watched to the end, in this session.
+   *
+   * Only ever grows — `replay` and `retry` deliberately leave it alone. Having
+   * seen a path is a fact about the viewer, not about the current run, and
+   * making them re-earn it would read as a punishment for pressing replay.
+   */
+  readonly seenCores: readonly CoreId[];
   /** Set when the browser refused to autoplay the muted intro. */
   readonly autoplayBlocked: boolean;
   readonly error: string | null;
@@ -49,14 +58,16 @@ export const INITIAL_FLOW_STATE: FlowState = {
   phase: 'intro-loading',
   selectedCore: null,
   requestedCores: [],
+  seenCores: [],
   autoplayBlocked: false,
   error: null,
   introRunId: 0,
   branchRunId: 0,
 };
 
-function withCore(state: FlowState, core: CoreId): readonly CoreId[] {
-  return state.requestedCores.includes(core) ? state.requestedCores : [...state.requestedCores, core];
+/** Appends a core to a list unless it is already there, preserving identity. */
+function withCore(list: readonly CoreId[], core: CoreId): readonly CoreId[] {
+  return list.includes(core) ? list : [...list, core];
 }
 
 export function flowReducer(state: FlowState, action: FlowAction): FlowState {
@@ -86,7 +97,7 @@ export function flowReducer(state: FlowState, action: FlowAction): FlowState {
         ...state,
         phase: 'branch-loading',
         selectedCore: action.core,
-        requestedCores: withCore(state, action.core),
+        requestedCores: withCore(state.requestedCores, action.core),
         branchRunId: state.branchRunId + 1,
         error: null,
       };
@@ -98,9 +109,21 @@ export function flowReducer(state: FlowState, action: FlowAction): FlowState {
         phase: state.selectedCore === 'forge' ? 'branch-playing-forge' : 'branch-playing-evolve',
       };
 
+    // Reaching the end of a sequence is what marks a core as seen — starting it
+    // is not enough, or leaving halfway would count.
     case 'branch-ended':
-      if (state.phase === 'branch-playing-forge') return { ...state, phase: 'branch-ended-forge' };
-      if (state.phase === 'branch-playing-evolve') return { ...state, phase: 'branch-ended-evolve' };
+      if (state.phase === 'branch-playing-forge')
+        return {
+          ...state,
+          phase: 'branch-ended-forge',
+          seenCores: withCore(state.seenCores, 'forge'),
+        };
+      if (state.phase === 'branch-playing-evolve')
+        return {
+          ...state,
+          phase: 'branch-ended-evolve',
+          seenCores: withCore(state.seenCores, 'evolve'),
+        };
       return state;
 
     case 'choose-another':
@@ -118,7 +141,7 @@ export function flowReducer(state: FlowState, action: FlowAction): FlowState {
       };
 
     case 'request-core':
-      return { ...state, requestedCores: withCore(state, action.core) };
+      return { ...state, requestedCores: withCore(state.requestedCores, action.core) };
 
     case 'fail':
       return { ...state, phase: 'error', error: action.message };
@@ -149,6 +172,8 @@ export interface FlowView {
   readonly isBranchBusy: boolean;
   /** Core whose finale copy the end overlay should show. */
   readonly endedCore: CoreId | null;
+  /** True once every path has been watched through — the end screen changes. */
+  readonly bothCoresSeen: boolean;
   readonly actions: {
     choose: (core: CoreId) => void;
     chooseAnother: () => void;
@@ -208,6 +233,7 @@ export function useChoiceFlow(): FlowView {
       isEndVisible: endedCore !== null,
       isBranchBusy: state.phase === 'branch-loading',
       endedCore,
+      bothCoresSeen: CORE_ORDER.every((core) => state.seenCores.includes(core)),
       actions,
     };
   }, [state, actions]);

@@ -29,7 +29,8 @@ export interface ModeAssets {
   readonly evolve: VideoAsset;
 }
 
-function withBase(path: string): string {
+/** Prefixes a `public/` path with Vite's base, so GitHub Pages sub-paths work. */
+export function withBase(path: string): string {
   const base = import.meta.env.BASE_URL || '/';
   const cleanPath = path.startsWith('/') ? path.slice(1) : path;
   return base.endsWith('/') ? `${base}${cleanPath}` : `${base}/${cleanPath}`;
@@ -112,12 +113,9 @@ export const assetManifest: Record<MediaMode, ModeAssets> = {
 };
 
 /**
- * Optional ambient score. No audio track ships with the current media package,
- * so this is intentionally `null` — {@link SoundToggle} stays hidden and no
- * request (and therefore no console error) is ever made. Drop a file into
- * `public/assets/audio/` and point this at it to enable sound.
+ * The video files carry no audio track of their own. The score is a separate
+ * set of three pieces — see `audioManifest.ts`.
  */
-export const ambientAudioSrc: string | null = null;
 
 export function getModeAssets(mode: MediaMode): ModeAssets {
   return assetManifest[mode];

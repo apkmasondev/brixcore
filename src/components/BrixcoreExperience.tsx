@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { getModeAssets } from '../config/assetManifest';
 import { COPY, TIMING } from '../config/experienceConfig';
+import { useAudioScore } from '../hooks/useAudioScore';
 import { useChoiceFlow, type LayerId } from '../hooks/useChoiceFlow';
 import { useMediaMode } from '../hooks/useMediaMode';
 import { useVideoPreload, type LayerKey } from '../hooks/useVideoPreload';
@@ -301,17 +302,31 @@ export function BrixcoreExperience() {
     if (!isEndVisible) setDossierOpen(false);
   }, [isEndVisible]);
 
+  /* --------------------------------------------------------------- score */
+
+  /**
+   * The score follows the *picture*, not the click.
+   *
+   * `activeLayer` is already the answer to "which layer is on screen", and
+   * during `branch-loading` it deliberately stays on the intro — so the intro
+   * theme keeps playing under the held final frame until the branch genuinely
+   * starts, and only then does the crossfade run. On desktop, where both
+   * branches are buffered before the choice appears, that is indistinguishable
+   * from crossfading on the click; on a slow connection it is what stops the
+   * music from racing ahead of a spinner.
+   *
+   * An error screen and the autoplay prompt both fall to silence: nothing is
+   * playing, so nothing should be scored.
+   */
+  const scoreTarget = phase === 'error' || autoplayBlocked ? null : activeLayer;
+  const score = useAudioScore(scoreTarget, isDataConstrained);
+
   /* -------------------------------------------------------------- render */
 
   const fallbackPoster =
     phase === 'branch-loading' || phase === 'error'
       ? (selectedCore ? assets[selectedCore].poster : assets.intro.poster)
       : assets.intro.poster;
-
-  const isRunning =
-    phase === 'intro-playing' ||
-    phase === 'branch-playing-forge' ||
-    phase === 'branch-playing-evolve';
 
   return (
     <main className={styles.root} style={MOTION_VARS}>
@@ -360,7 +375,7 @@ export function BrixcoreExperience() {
         blanket={phase === 'intro-loading'}
       />
 
-      <SoundToggle active={isRunning} />
+      {score.available && <SoundToggle enabled={score.enabled} onToggle={score.toggle} />}
 
       {phase === 'error' && (
         <PosterFallback kind="error" poster={fallbackPoster} onAction={actions.retry} />

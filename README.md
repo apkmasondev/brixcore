@@ -35,12 +35,14 @@ public/assets/            media, served verbatim at /assets/**
 src/
   config/
     assetManifest.ts      every media URL + its verified duration/fps/frames
+    audioManifest.ts      the three score tracks, two encodes each
     experienceConfig.ts   copy, timings, breakpoint, brick anchors
     projectDossier.ts     the informational layer's copy and figures
   hooks/
     useChoiceFlow.ts      the state machine (reducer)
     useMediaMode.ts       desktop vs mobile media set, data-constrained detection
     useVideoPreload.ts    owns the video elements and what downloads when
+    useAudioScore.ts      owns the score: gain graph, crossfades, preload budget
     useReducedMotion.ts   prefers-reduced-motion
   components/
     BrixcoreExperience.tsx  orchestrator — the only place effects live
@@ -50,11 +52,12 @@ src/
     InfoPanel.tsx           the project dossier, opened from the end screen
     LoadingOverlay.tsx      the discreet loader
     PosterFallback.tsx      error and autoplay-blocked screens
-    SoundToggle.tsx         optional ambient audio
+    SoundToggle.tsx         the score's only control (presentational)
   styles/
     filmFrame.module.css    the shared film-frame geometry
     global.css              tokens and reset
 docs/media-report.md      how every video file was verified
+docs/audio-report.md      how the score was normalised and encoded
 ```
 
 Every path, string, breakpoint, timing and brick coordinate lives in `config/`.
@@ -280,11 +283,104 @@ the flow is actually waiting on can raise an error.
 
 ## Sound
 
-The video files contain **no audio track**. `SoundToggle` is wired for a separate
-`<audio>` element — off by default, started only from a real click, never
-autoplayed — but `ambientAudioSrc` in `assetManifest.ts` is `null`, so the control
-does not render and no request is made. Point it at a file in
-`public/assets/audio/` to enable it.
+The video files contain **no audio track**. The score is separate: three pieces,
+one per layer of the film, crossfaded by `hooks/useAudioScore.ts`.
+
+### Why Web Audio rather than `element.volume`
+
+A `.volume` ramp is the obvious way to fade a media element and it is the wrong
+one here: **iOS Safari treats `volume` as read-only.** Assigning it is silently
+ignored, because level is the hardware buttons' job. Every fade in this feature
+would have been a hard cut on iPhone. Each element is routed through its own
+`GainNode` instead, so the fades happen in the audio graph, where every engine
+honours them.
+
+### The fades are equal-power, not linear
+
+Two linear ramps crossing sag by about 3 dB through the middle, which between two
+pieces of music reads as a dip rather than a dissolve. Each fade follows a
+sine/cosine pair, built out of chained short linear ramps — which keeps it
+trivially interruptible (cancel, pin the current value, re-schedule) for a viewer
+clicking quickly. `setValueCurveAtTime` cannot be cut into safely halfway.
+
+Measured in the browser, intro → FORGE:
+
+| t (ms) | intro | forge | sum of squares |
+|---|---|---|---|
+| 245 | 0.91 | 0.41 | 1.00 |
+| 480 | 0.68 | 0.73 | 0.99 |
+| 607 | 0.50 | 0.87 | 1.01 |
+| 975 | 0.00 | 1.00 | 1.00 |
+
+Constant power throughout. Switching sound on rides a 1200 ms master fade-in;
+switching it off, a 600 ms fade-out, after which every element is paused.
+
+### The score follows the picture, not the click
+
+The target track is `activeLayer` — the same value that decides which video layer
+is on screen. During `branch-loading` that deliberately stays on the intro, so
+the intro theme keeps playing under the held final frame and the crossfade only
+runs once the branch genuinely starts. On desktop, where both branches are
+buffered before the choice appears, this is indistinguishable from crossfading on
+the click; on a slow connection it is what stops the music from racing ahead of a
+spinner. The error screen and the autoplay prompt both fall to silence.
+
+### Never two tracks at once
+
+Exactly one track is ever the target. Everything else is ramped to zero and then
+**paused** once silent, rather than left running under a zero gain. The only
+overlap is the length of a crossfade, which is what a crossfade is.
+
+### Loudness was fixed before compression
+
+The three masters arrived between -12.3 and -13.0 LUFS and two of them clipped
+(+0.29 and +0.25 dBTP). Crossfading straight between them would have stepped in
+level at every transition. A two-pass EBU R128 normalisation (`I=-18 LUFS`,
+`TP=-1.5 dBTP`) puts them within **0.13 dB** of each other:
+
+| track | duration | source | Opus/WebM | AAC/M4A | in | out |
+|---|---|---|---|---|---|---|
+| intro | 170.98 s | 3.83 MB | 2.11 MB | 2.76 MB | -12.31 | -17.40 |
+| forge | 249.90 s | 5.84 MB | 2.95 MB | 4.05 MB | -12.26 | -17.40 |
+| evolve | 242.26 s | 5.32 MB | 3.11 MB | 3.88 MB | -13.01 | -17.53 |
+
+Two encodes per track, chosen per engine with `canPlayType`: Opus in WebM is
+smaller at equal quality but Safari only decodes it from 17, so AAC in M4A is
+what keeps a score on iOS 15/16. **Only one of the two is ever downloaded** —
+verified: no `.m4a` request on Chromium.
+
+Each track runs far longer than the picture it sits under (10 s of intro film
+against 171 s of music). That is deliberate: the choice screen and the end screen
+both persist for as long as the viewer leaves them, so every track loops and
+silence never falls.
+
+### Nothing downloads until sound is switched on
+
+Autoplay policy means a score can never start on its own, so bytes fetched before
+the toggle is pressed are bytes most viewers will never hear. Every element
+starts at `preload="none"`. The first toggle-on promotes them, on the same budget
+as the video:
+
+| | intro | branches |
+|---|---|---|
+| Desktop | `auto` | both `auto` |
+| Mobile / Save-Data / 2g-3g | `auto` | `none` until chosen |
+
+Verified on a 375 px viewport: the unchosen branch finished the run at
+`readyState 0`, `networkState 1`, nothing buffered.
+
+Both the `AudioContext` and the first `play()` are started **inside the click**.
+A context constructed outside a gesture starts suspended, and iOS only honours
+`play()` while the gesture is still in scope — a passive effect is already too
+late. A hidden tab suspends the context, so a backgrounded film makes no noise.
+
+### Failure is silence, never an error screen
+
+The film carries the experience; the music is additive. A track that will not
+load or will not play is marked failed and skipped — verified by failing a track
+and then selecting it: all gains fell to zero, nothing was forced, the film
+carried on and the console stayed clean. If the browser has no `AudioContext`, or
+can decode neither encode, `SoundToggle` does not render at all.
 
 ## A note on the asset folder
 

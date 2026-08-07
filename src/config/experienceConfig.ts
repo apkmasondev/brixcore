@@ -87,6 +87,31 @@ export const TIMING = {
   panelReveal: 560,
 } as const;
 
+/* --------------------------------------------------------------------- audio */
+
+export const AUDIO = {
+  /**
+   * Ceiling for the whole score. The tracks are normalised to -18 LUFS, which
+   * is already a bed level; this is the last bit of headroom that keeps the
+   * music under the picture rather than alongside it.
+   */
+  masterVolume: 0.8,
+  /**
+   * Track-to-track. Long enough to read as a dissolve rather than a cut, short
+   * enough that the new piece is established before the picture has moved on.
+   */
+  crossfade: 900,
+  /** Sound switched on. Slower than the fade-out — arriving should be gentler. */
+  fadeIn: 1200,
+  /** Sound switched off, and any retreat to silence. */
+  fadeOut: 600,
+  /**
+   * Segments used to approximate an equal-power fade out of chained linear
+   * ramps. Twelve is past the point where more is audible.
+   */
+  fadeSegments: 12,
+} as const;
+
 /* ---------------------------------------------------------------- preloading */
 
 export const PRELOAD = {

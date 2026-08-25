@@ -209,6 +209,78 @@ touch minimum, balanced within that band rather than pinned to the bottom edge.
 `100dvh` with `svh`/`vh` fallbacks, `position: fixed` on `<body>`, and
 `overscroll-behavior: none` mean the page cannot scroll or rubber-band.
 
+## The film was re-encoded for the web
+
+The masters came out of the edit at x264 defaults: 5.8–7.2 Mbps for 1920×1080 at
+24 fps, a scene-driven keyframe interval that ran up to 10 s, `aq-mode=1`, and
+no colour tags at all. That
+is a fine archive encode and a wasteful delivery one — a desktop viewer who is
+offered both branches downloads **40 MB** before the choice screen is even
+answered.
+
+Re-encoding the same pictures with settings chosen for this material takes the
+whole set from **56.3 MB to 37.3 MB (−34 %)** with no visible change:
+
+| File | Before | After | Δ | Bitrate | VMAF |
+|---|---|---|---|---|---|
+| `desktop/clips/01-intro-choice.mp4` | 6.86 MB | **4.40 MB** | −35.9 % | 3.69 Mbps | 98.08 |
+| `desktop/sequences/forge-path-sequence.mp4` | 16.29 MB | **10.68 MB** | −34.5 % | 4.48 Mbps | 98.35 |
+| `desktop/sequences/evolve-path-sequence.mp4` | 17.20 MB | **10.47 MB** | −39.2 % | 4.39 Mbps | 97.90 |
+| `mobile/01-intro-choice-mobile.mp4` | 2.61 MB | **1.95 MB** | −25.1 % | 1.64 Mbps | 97.21 |
+| `mobile/forge-path-sequence-mobile.mp4` | 6.71 MB | **5.13 MB** | −23.5 % | 2.15 Mbps | 97.27 |
+| `mobile/evolve-path-sequence-mobile.mp4` | 6.63 MB | **4.69 MB** | −29.2 % | 1.97 Mbps | 96.89 |
+| **Desktop set** | **40.35 MB** | **25.55 MB** | **−36.7 %** | | |
+| **Mobile set** | **15.95 MB** | **11.77 MB** | **−26.2 %** | | |
+
+VMAF is the mean over every frame, scored against the master with
+`libvmaf` — 1 % lows are 94.3–95.4 on desktop. A second-generation encode cannot
+score above its own ceiling: re-encoding the intro at CRF 19, at *more* than the
+master's own size, tops out at 98.78. CRF 23 lands 0.7 below that ceiling for 36 %
+fewer bytes, which is where the curve stops being worth paying for.
+
+```bash
+ffmpeg -i MASTER.mp4 -c:v libx264 -preset veryslow -crf 23 -profile:v high -pix_fmt yuv420p -g 120 -keyint_min 120 -sc_threshold 0 -x264-params aq-mode=3 -color_primaries bt709 -color_trc bt709 -colorspace bt709 -an -movflags +faststart OUT.mp4
+```
+
+**`aq-mode=3` rather than the default.** Both films are near-black frames with
+small, bright, high-detail bricks — the case adaptive quantisation exists for.
+Measured on the intro at equal size, `aq-mode=3` scores **97.77** against
+**97.18** for the default: the same bytes, spent where this picture needs them.
+
+**CRF, not a target bitrate.** The two branch sequences are a 10 s build followed
+by a 10 s finale with very different complexity. A fixed bitrate would starve one
+half and overspend the other; constant quality is what keeps them level.
+
+**A 5 s GOP (`-g 120`), fixed.** Nothing in the experience seeks — every layer
+plays linearly from 0 and the only `currentTime` write is a reset to zero — so
+the 2 s keyframe interval that adaptive streaming needs would be pure overhead
+here. Measured on the intro: 2 s costs 2.6 % over one-keyframe-per-clip, 5 s
+costs 1.3 %. Five seconds keeps a little seek granularity for almost nothing. `-sc_threshold 0` makes the interval deterministic rather than
+scene-driven.
+
+**The 720p set is derived from the 1080p master, not from the old 720p file.**
+Re-encoding the shipped mobile file would have been a third generation. Scaling
+the master down with Lanczos instead costs one, and against a lossless 720p
+reference the new files score within 0.3 VMAF of the ones they replace while
+being a quarter smaller.
+
+**`-movflags +faststart`** puts `moov` before `mdat` so the first frame decodes
+without waiting for the tail. The masters already had it; it is kept.
+**`-an`** because the film genuinely has no audio — the score is separate.
+**`bt709` tags** replace the masters' unspecified colour, which every browser was
+guessing at.
+
+Verified after the swap: exact frame counts (240 / 480), exact durations
+(10.000 s / 20.000 s), clean full decode, `blackdetect` finds nothing, `moov`
+first, and a desktop run played `forge-path-sequence.mp4` from 0 to 20.0 s at
+`readyState 4` throughout with an empty console.
+
+AV1 would go further — the intro at VMAF 97.5 costs 2.7 MB against 4.4 MB here —
+but it would mean shipping two encodes and a `<source>` fallback for the Safari and low-end
+Android devices that have no hardware decoder, on an experience whose one rule is
+that the picture must never hitch. The H.264 set above is what every engine
+decodes in hardware today.
+
 ## Preloading
 
 The intro is the critical path and is always eager. Branches download only once

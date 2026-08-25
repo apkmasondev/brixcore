@@ -67,6 +67,7 @@ export const DOSSIER = {
         'All ten video files were verified before a line of interface existed: a full decode to surface damage, an exact frame count rather than a trusted header duration, and a black-frame scan to catch a clip that runs the right length but ends on nothing. Ten of ten came back clean — 24 fps exactly, no audio track, no black tails.',
         "The intro's final frame was then decoded to raw pixels and the orange and cyan clusters isolated. Their centres — 25.9% and 73.9% of frame width — are the coordinates the two labels sit on. The same pass produced the accent colours, sampled from the lit brick faces instead of picked from a swatch.",
         'One figure from that measurement, the outermost brick edge at 17.6%, also decides how far the film is ever allowed to be cropped.',
+        'The films that ship are not the masters. Re-encoded at constant quality, with the quantiser biased toward the dark frames this footage is almost entirely made of, the six files lost a third of their weight — 56.3 MB down to 37.3 MB — while scoring a mean VMAF of 97.9 against the originals they replace. The 720p set was rebuilt from the 1080p masters rather than from the old 720p files, so it carries one generation of loss instead of two.',
       ],
       specs: [
         { label: 'Files verified', value: '10 of 10' },
@@ -75,6 +76,8 @@ export const DOSSIER = {
         { label: 'FORGE core', value: '25.9% of frame width' },
         { label: 'EVOLVE core', value: '73.9% of frame width' },
         { label: 'Accents sampled', value: '#F2913C · #4FC6E4' },
+        { label: 'Delivered payload', value: '56.3 MB → 37.3 MB' },
+        { label: 'VMAF vs master', value: '97.9 mean' },
       ],
     },
     {

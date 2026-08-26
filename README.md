@@ -7,6 +7,9 @@ plays its own sequence and ends on its own line.
 Not a landing page — there is nothing below the film, and nothing is driven by
 scroll.
 
+Version history, including what changed with the current cut of the film, is in
+[CHANGELOG.md](CHANGELOG.md).
+
 ## Running it
 
 ```bash
@@ -189,12 +192,16 @@ reverse-engineering `object-fit`:
 | 4:3 – 16:9 | `height: 100%`, overflows horizontally (cover) |
 | narrower than 4:3 | `width: 100%`, letterboxes (contain) |
 
-The 4:3 switch is not arbitrary: `cover` at 4:3 crops 12.5 % per side and the
-outermost brick edge sits at 17.6 %, so no brick is ever clipped. Anything
-narrower letterboxes rather than cropping further.
+`cover` at 4:3 crops 12.5 % per side and the outermost brick edge sits at
+**27.7 %**, so nothing is clipped with room to spare — on these measurements
+`cover` stays safe all the way down to a ~0.79 viewport aspect. The switch stays
+at 4:3 anyway, because that is also where the portrait layout moves the choice UI
+off the picture and into the black band underneath; below it the film letterboxes
+rather than cropping further.
 
-Brick centres were measured from the actual final frame — 25.9 % and 73.9 % —
-see [docs/media-report.md](docs/media-report.md).
+Brick centres were measured from the actual final frame — **37.1 % and 62.8 %**,
+mirroring each other to within 0.12 % of frame width — see
+[docs/media-report.md](docs/media-report.md).
 
 ## Desktop and mobile are laid out separately
 
@@ -211,75 +218,126 @@ touch minimum, balanced within that band rather than pinned to the bottom edge.
 
 ## The film was re-encoded for the web
 
-The masters came out of the edit at x264 defaults: 5.8–7.2 Mbps for 1920×1080 at
-24 fps, a scene-driven keyframe interval that ran up to 10 s, `aq-mode=1`, and
-no colour tags at all. That
-is a fine archive encode and a wasteful delivery one — a desktop viewer who is
-offered both branches downloads **40 MB** before the choice screen is even
-answered.
+Three masters come out of the generator: one 10 s intro and two 20 s branches,
+all 1280×720 at 24 fps, each carrying an AAC track the experience does not use.
+The branches arrive at **7.0 and 7.2 Mbps** — archive-grade for this resolution,
+and roughly three times what the picture needs on the wire.
 
-Re-encoding the same pictures with settings chosen for this material takes the
-whole set from **56.3 MB to 37.3 MB (−34 %)** with no visible change:
+The delivered set is two tiers, both at the master's own 1280×720. There is no
+1080p to serve: the masters *are* 720p, and upscaling would ship invented pixels.
 
-| File | Before | After | Δ | Bitrate | VMAF |
-|---|---|---|---|---|---|
-| `desktop/clips/01-intro-choice.mp4` | 6.86 MB | **4.40 MB** | −35.9 % | 3.69 Mbps | 98.08 |
-| `desktop/sequences/forge-path-sequence.mp4` | 16.29 MB | **10.68 MB** | −34.5 % | 4.48 Mbps | 98.35 |
-| `desktop/sequences/evolve-path-sequence.mp4` | 17.20 MB | **10.47 MB** | −39.2 % | 4.39 Mbps | 97.90 |
-| `mobile/01-intro-choice-mobile.mp4` | 2.61 MB | **1.95 MB** | −25.1 % | 1.64 Mbps | 97.21 |
-| `mobile/forge-path-sequence-mobile.mp4` | 6.71 MB | **5.13 MB** | −23.5 % | 2.15 Mbps | 97.27 |
-| `mobile/evolve-path-sequence-mobile.mp4` | 6.63 MB | **4.69 MB** | −29.2 % | 1.97 Mbps | 96.89 |
-| **Desktop set** | **40.35 MB** | **25.55 MB** | **−36.7 %** | | |
-| **Mobile set** | **15.95 MB** | **11.77 MB** | **−26.2 %** | | |
+| File | Master | Shipped | Bitrate | VMAF |
+|---|---|---|---|---|
+| `desktop/clips/01-intro-choice.mp4` | 2.30 MB | **2.14 MB** | 1.80 Mbps | **99.63** |
+| `desktop/sequences/forge-path-sequence.mp4` | 17.09 MB | **6.13 MB** | 2.57 Mbps | 98.50 |
+| `desktop/sequences/evolve-path-sequence.mp4` | 17.57 MB | **6.06 MB** | 2.54 Mbps | 98.06 |
+| `mobile/01-intro-choice-mobile.mp4` | 2.30 MB | **1.97 MB** | 1.65 Mbps | 98.36 |
+| `mobile/forge-path-sequence-mobile.mp4` | 17.09 MB | **4.07 MB** | 1.71 Mbps | 97.32 |
+| `mobile/evolve-path-sequence-mobile.mp4` | 17.57 MB | **3.95 MB** | 1.66 Mbps | 96.00 |
 
-VMAF is the mean over every frame, scored against the master with
-`libvmaf` — 1 % lows are 94.3–95.4 on desktop. A second-generation encode cannot
-score above its own ceiling: re-encoding the intro at CRF 19, at *more* than the
-master's own size, tops out at 98.78. CRF 23 lands 0.7 below that ceiling for 36 %
-fewer bytes, which is where the curve stops being worth paying for.
+A desktop run — intro plus both branches — is **14.3 MB**, against 25.6 MB for
+the film this replaces. A mobile run is intro plus one branch, about **6 MB**.
 
 ```bash
-ffmpeg -i MASTER.mp4 -c:v libx264 -preset veryslow -crf 23 -profile:v high -pix_fmt yuv420p -g 120 -keyint_min 120 -sc_threshold 0 -x264-params aq-mode=3 -color_primaries bt709 -color_trc bt709 -colorspace bt709 -an -movflags +faststart OUT.mp4
+ffmpeg -i MASTER.mp4 -c:v libx264 -preset veryslow -crf 20 -profile:v high -pix_fmt yuv420p -g 120 -keyint_min 120 -sc_threshold 0 -x264-params aq-mode=3 -vf setparams=color_primaries=bt709:color_trc=bt709:colorspace=bt709:range=tv -an -movflags +faststart OUT.mp4
 ```
 
-**`aq-mode=3` rather than the default.** Both films are near-black frames with
-small, bright, high-detail bricks — the case adaptive quantisation exists for.
-Measured on the intro at equal size, `aq-mode=3` scores **97.77** against
-**97.18** for the default: the same bytes, spent where this picture needs them.
+### VMAF has a ceiling here, and it is not 100
 
-**CRF, not a target bitrate.** The two branch sequences are a 10 s build followed
-by a 10 s finale with very different complexity. A fixed bitrate would starve one
-half and overspend the other; constant quality is what keeps them level.
+Scored against **itself**, this footage returns **99.63**, not 100. The model is
+a trained regressor and these frames — near-black, full of small high-contrast
+detail — sit where it does not quite saturate. So every score below is read
+against 99.6, not against a perfect 100, and the intro's 99.63 is not a rounding
+artefact: it is the ceiling exactly, because that file is not re-encoded at all.
 
-**A 5 s GOP (`-g 120`), fixed.** Nothing in the experience seeks — every layer
-plays linearly from 0 and the only `currentTime` write is a reset to zero — so
-the 2 s keyframe interval that adaptive streaming needs would be pure overhead
-here. Measured on the intro: 2 s costs 2.6 % over one-keyframe-per-clip, 5 s
-costs 1.3 %. Five seconds keeps a little seek granularity for almost nothing. `-sc_threshold 0` makes the interval deterministic rather than
-scene-driven.
+Two measurement bugs were fixed before any of these numbers were trusted:
 
-**The 720p set is derived from the 1080p master, not from the old 720p file.**
-Re-encoding the shipped mobile file would have been a third generation. Scaling
-the master down with Lanczos instead costs one, and against a lossless 720p
-reference the new files score within 0.3 VMAF of the ones they replace while
-being a quarter smaller.
+- **Frame pairing.** The masters carry audio, so their container runs 10.005 s
+  against the encode's 10.000 s. Left alone, libvmaf drifts out of alignment near
+  the tail and quietly reports a quality loss that is not there. Both sides now
+  have their timestamps rebuilt from the frame index.
+- **A colour conversion inside the comparison.** Scoring a tagged encode against
+  an untagged master makes ffmpeg insert a real conversion, which shows up as
+  lost quality. Both sides are now forced to the same colour parameters.
 
-**`-movflags +faststart`** puts `moov` before `mdat` so the first frame decodes
-without waiting for the tail. The masters already had it; it is kept.
-**`-an`** because the film genuinely has no audio — the score is separate.
-**`bt709` tags** replace the masters' unspecified colour, which every browser was
-guessing at.
+The control that catches both: a file scored against itself must return the
+ceiling, and a bit-exact copy must return the same number as its source.
 
-Verified after the swap: exact frame counts (240 / 480), exact durations
-(10.000 s / 20.000 s), clean full decode, `blackdetect` finds nothing, `moov`
-first, and a desktop run played `forge-path-sequence.mp4` from 0 to 20.0 s at
-`readyState 4` throughout with an empty console.
+### The intro is not re-encoded at all
 
-AV1 would go further — the intro at VMAF 97.5 costs 2.7 MB against 4.4 MB here —
-but it would mean shipping two encodes and a `<source>` fallback for the Safari and low-end
-Android devices that have no hardware decoder, on an experience whose one rule is
-that the picture must never hitch. The H.264 set above is what every engine
-decodes in hardware today.
+Its master is already efficient — 1.79 Mbps for content that is mostly drifting
+bricks — and every re-encode that held quality came out **larger**:
+
+| Intro encode | Size | VMAF |
+|---|---|---|
+| CRF 21 | 2.53 MB | 99.20 |
+| CRF 23 | 2.17 MB | 98.85 |
+| **stream copy** | **2.14 MB** | **99.63** |
+
+So it ships as a stream copy: the video bitstream is passed through untouched,
+the AAC track is dropped, `+faststart` is applied and the colour is tagged with a
+bitstream filter rather than by re-encoding. Verified by decoding both to raw
+YUV — **identical MD5**. Smaller than any re-encode and mathematically lossless;
+re-encoding it would have cost bytes *and* a generation of quality.
+
+### The mobile tier is lighter, not smaller
+
+The obvious move for a mobile set is to downscale. Measured, it loses — this
+footage is fine detail nearly everywhere, and dropping resolution destroys more
+than the bitrate saves. Both scored at 720p against the master:
+
+| Mobile candidate | Size | VMAF | 1 % low |
+|---|---|---|---|
+| 960×540, CRF 21 | 4.02 MB | 96.06 | 90.42 |
+| **1280×720, CRF 25** | **3.79 MB** | **96.77** | **91.82** |
+
+The 540p encode is bigger *and* worse. So both tiers stay at 1280×720 and the
+split is bitrate alone — CRF 20 for desktop, CRF 24 for mobile.
+
+### The rest of the settings
+
+**`aq-mode=3`.** Both films are near-black frames with small, bright, high-detail
+bricks — the case adaptive quantisation exists for. On the previous film, at
+equal size, it scored 97.77 against 97.18 for the default.
+
+**CRF chosen against the hardest clip, not the average.** EVOLVE — a fractal
+bloom of several thousand individually lit bricks — is the worst case in the set,
+so the ladder was picked from its curve:
+
+| CRF | Size | VMAF | 1 % low |
+|---|---|---|---|
+| 19 | 6.83 MB | 98.31 | 94.18 |
+| **20** | **6.06 MB** | **98.06** | **93.58** |
+| 21 | 5.40 MB | 97.71 | 92.82 |
+| 23 | 4.37 MB | 96.72 | 91.36 |
+| **24** | **3.95 MB** | **96.00** | **90.33** |
+| 25 | 3.57 MB | 95.07 | 88.99 |
+
+CRF 19 buys 0.25 VMAF for 13 % more bytes; the curve stops being worth paying
+for at 20.
+
+**A 5 s GOP (`-g 120`), fixed.** Nothing here seeks — every layer plays linearly
+from 0 and the only `currentTime` write is a reset to zero — so the 2 s interval
+adaptive streaming needs would be pure overhead. `-sc_threshold 0` makes the
+interval deterministic rather than scene-driven.
+
+**`setparams`, not `-colorspace`.** On ffmpeg 9 the plain `-color_primaries /
+-color_trc / -colorspace` output flags tag only the primaries and leave transfer
+and matrix `unknown` — and worse, they can trigger a real pixel conversion. The
+`setparams` filter tags all three and touches nothing: verified by encoding with
+and without it and confirming the decoded output has an **identical MD5**. Every
+shipped file now reports `tv / bt709 / bt709 / bt709`.
+
+**`-an`**, because the score is a separate set of tracks and the film's own audio
+is discarded.
+
+### Verified after the swap
+
+Exact frame counts (240 / 480), exact durations (10.000 s / 20.000 s), clean full
+decode, `blackdetect` finds nothing, `moov` before `mdat`, keyframes exactly on
+the 120-frame grid, no audio stream, colour fully tagged. In the browser: every
+file decodes at 1280×720 at each of five points across its length with no media
+error, the unchosen branch stays at `readyState 0`, and the console stays empty.
 
 ## Preloading
 
@@ -461,8 +519,6 @@ The URLs are unchanged (`/assets/video/desktop/clips/01-intro-choice.mp4`), and
 the video is copied, not bundled.
 
 Because `public/` ships verbatim, anything left in it is shipped whether or not
-the app asks for it. The four source clips behind the joined branch sequences
-(`02a`, `02b`, `03a`, `03b`) were never requested at runtime but were being
-copied into every build — 33 MB — so they were removed once
-[docs/media-report.md](docs/media-report.md) had verified the concatenations
-against them. They remain in git history at `b69e3c4`.
+the app asks for it — so only the six files the app actually requests live there.
+The masters they are encoded from are deliberately **not** in the repo: nothing
+requests them, and at 37 MB they would be 37 MB added to every clone to no end.

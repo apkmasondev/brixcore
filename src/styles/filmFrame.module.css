@@ -12,8 +12,11 @@
  *   narrower than 4:3          → width 100%,  letterboxes            (contain)
  *
  * The 4:3 switch is deliberate. At exactly 4:3, cover crops 12.5% per side; the
- * outermost brick edge sits at 17.6%, so no brick is ever clipped. Anything
- * narrower letterboxes instead of cropping further.
+ * outermost brick edge sits at 27.7%, so no brick is ever clipped, with room to
+ * spare — on this composition cover would stay safe down to a ~0.79 aspect. The
+ * switch stays at 4:3 because it is also where the choice UI moves off the
+ * picture into the letterbox band. Anything narrower letterboxes instead of
+ * cropping further.
  */
 .frame {
   position: absolute;

@@ -14,10 +14,10 @@ export const MOBILE_BREAKPOINT_PX = 768;
  * Touch devices up to this width also get the mobile media set.
  *
  * Width alone is not enough: a phone held in landscape reports ~850 px and would
- * otherwise pull the 1080p files — around 16 MB per branch — over a mobile
+ * otherwise pull the desktop files — about 6 MB per branch — over a mobile
  * connection. A coarse pointer at this size means a phone or a small tablet,
- * where the 720p set is the right trade. Desktops report a fine pointer and are
- * unaffected.
+ * where the lighter set is the right trade. Desktops report a fine pointer and
+ * are unaffected.
  */
 export const TOUCH_MOBILE_MAX_WIDTH_PX = 1024;
 
@@ -25,29 +25,46 @@ export const TOUCH_MOBILE_MAX_WIDTH_PX = 1024;
  * Anchor points for the choice buttons, expressed in **video content
  * coordinates** (percent of the 16:9 frame), not viewport coordinates.
  *
- * Measured from the final frame of `01-intro-choice.mp4` by isolating the
- * orange and cyan pixel clusters:
+ * Measured from the final frame of `01-intro-choice.mp4`: the frame is decoded
+ * to raw RGB, thresholded into bright objects, and the two largest connected
+ * components taken. Each is then identified by which accent it contains — the
+ * separation is total, with all 11 878 orange pixels falling inside one
+ * component and all 20 521 cyan pixels inside the other:
  *
- *   FORGE  bbox x 17.60%–34.22%, y 39.26%–60.65%  → centre 25.91% / 49.95%
- *   EVOLVE bbox x 65.83%–82.03%, y 39.54%–59.54%  → centre 73.93% / 49.54%
+ *   FORGE  bbox x 27.73%–46.41%, y 36.39%–63.89%  → centre 37.07% / 50.14%
+ *   EVOLVE bbox x 53.36%–72.27%, y 35.97%–64.03%  → centre 62.81% / 50.00%
  *
- * The mobile intro is the same composition at 1280×720, so the same numbers
- * apply to both media sets.
+ * The two centres mirror each other to within 0.12% of frame width, which is
+ * what says the measurement found the composition rather than fitted it.
  *
- * `labelY` sits just under each brick so the artwork is never covered.
+ * Both media sets are the same 1280×720 composition, so the numbers apply to
+ * each.
+ *
+ * `labelY` sits just under each brick so the artwork is never covered. It is a
+ * film-relative percentage, and on a viewport wider than 16:9 the film is taller
+ * than the window — so the further down it goes, the sooner it leaves the
+ * bottom of a short, wide window. 72.5% clears the bricks (they end at 63.9%)
+ * while keeping the label on screen at the window shapes a browser can
+ * realistically be dragged into.
  */
 export const BRICK_ANCHORS: Record<CoreId, { x: number; brickBottomY: number; labelY: number }> = {
-  forge: { x: 25.9, brickBottomY: 60.7, labelY: 71 },
-  evolve: { x: 73.9, brickBottomY: 59.5, labelY: 71 },
+  forge: { x: 37.1, brickBottomY: 63.9, labelY: 72.5 },
+  evolve: { x: 62.8, brickBottomY: 64.0, labelY: 72.5 },
 };
 
 /**
- * Widest brick extent across both bricks, as percent of frame width.
- * `object-fit: cover` must never crop more than this, or a brick gets cut off —
- * which is why the stage falls back to `contain` below a 4:3 viewport
- * (4:3 crops 12.5% per side, leaving ~5% of headroom).
+ * Outermost brick edge, as percent of frame width — 27.73% on both sides, the
+ * bricks being symmetric. `object-fit: cover` must never crop more than this or
+ * a brick gets cut off.
+ *
+ * This composition holds the bricks far closer to centre than the previous film
+ * did (17.6%), so cover stays safe all the way down to a ~0.79 viewport aspect.
+ * The stage still falls back to `contain` below 4:3, which crops 12.5% per side:
+ * more conservative than the picture now requires, and kept that way because
+ * that threshold is also where the portrait layout moves the choice UI into the
+ * black band under the film.
  */
-export const SAFE_CROP_LIMIT_PERCENT = 17.6;
+export const SAFE_CROP_LIMIT_PERCENT = 27.7;
 
 /* -------------------------------------------------------------- timing (ms) */
 

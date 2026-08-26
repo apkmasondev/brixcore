@@ -87,7 +87,8 @@ export function BrixcoreExperience() {
         id: 'intro',
         asset: assets.intro,
         preload: 'auto',
-        label: 'A spacecraft built from bricks disassembles into two glowing bricks.',
+        label:
+          'A field of grey bricks tumbles through a dark void and resolves into two glowing cores, one amber, one cyan.',
       },
       // Branches render as `preload="none"` for their whole life. `useVideoPreload`
       // is then the single owner of when a branch starts downloading: letting
@@ -97,13 +98,15 @@ export function BrixcoreExperience() {
         id: 'forge',
         asset: assets.forge,
         preload: 'none',
-        label: 'The FORGE core assembles into a molten creature.',
+        label:
+          'The FORGE core draws the bricks inward, compresses them into a molten mass and forges a glowing monolith.',
       },
       {
         id: 'evolve',
         asset: assets.evolve,
         preload: 'none',
-        label: 'The EVOLVE core assembles into a futuristic city.',
+        label:
+          'The EVOLVE core branches outward, growing into a symmetrical bloom of bricks lit from within.',
       },
     ];
   }, [assets]);

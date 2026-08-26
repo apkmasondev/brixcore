@@ -314,8 +314,14 @@
   }
 }
 
-/* Short landscape phones: keep the brick anchoring, shrink the chrome. */
-@media (min-aspect-ratio: 4 / 3) and (max-height: 460px) {
+/*
+ * Short landscape phones, and any short wide window: keep the brick anchoring,
+ * shrink the chrome. The threshold is 560px rather than a phone-sized 460px
+ * because the label is placed as a percentage of the *film*, and on a window
+ * wider than 16:9 the film is taller than the window — so a short window pushes
+ * the label toward the bottom edge long before the window is phone-sized.
+ */
+@media (min-aspect-ratio: 4 / 3) and (max-height: 560px) {
   .prompt {
     top: 13%;
   }

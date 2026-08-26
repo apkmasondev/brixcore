@@ -3,7 +3,12 @@
  *
  * Files live in `public/assets/**` and are served verbatim at `/assets/**`.
  * Every entry below was verified with ffprobe (see `docs/media-report.md`):
- * H.264 High / yuv420p / 24 fps, no audio track, no truncated or black tails.
+ * H.264 High / yuv420p / 24 fps / 1280×720, no audio track, no truncated or
+ * black tails, colour fully tagged bt709.
+ *
+ * Both media sets are the same resolution. The masters are 720p, so there is no
+ * larger picture to serve a desktop; the two sets differ in bitrate instead —
+ * see `MOBILE_BREAKPOINT_PX` in `experienceConfig.ts` for who gets which.
  */
 
 export type MediaMode = 'desktop' | 'mobile';
@@ -48,35 +53,29 @@ export const assetManifest: Record<MediaMode, ModeAssets> = {
       src: withBase('/assets/video/desktop/clips/01-intro-choice.mp4'),
       poster: POSTERS.intro,
       duration: 10,
-      width: 1920,
-      height: 1080,
+      width: 1280,
+      height: 720,
       fps: 24,
       frames: 240,
     },
-    // Pre-joined from the 02a + 03a source clips, which is why they are no
-    // longer in the repo — `public/` ships verbatim, and 33 MB that nothing
-    // ever requests was 33 MB of dead weight in every build. See
-    // `docs/media-report.md` for the concatenation check, and git history
-    // (commit b69e3c4) if the sources are ever needed again.
-    //
-    // Playing the combined file avoids a mid-story source swap, which is where
-    // inter-scene hitching would otherwise appear.
+    // Each branch is one 20 s file rather than a build clip followed by a
+    // finale clip. Playing a single file avoids a mid-story source swap, which
+    // is where inter-scene hitching would otherwise appear.
     forge: {
       src: withBase('/assets/video/desktop/sequences/forge-path-sequence.mp4'),
       poster: POSTERS.forge,
       duration: 20,
-      width: 1920,
-      height: 1080,
+      width: 1280,
+      height: 720,
       fps: 24,
       frames: 480,
     },
-    // Pre-joined 02b + 03b.
     evolve: {
       src: withBase('/assets/video/desktop/sequences/evolve-path-sequence.mp4'),
       poster: POSTERS.evolve,
       duration: 20,
-      width: 1920,
-      height: 1080,
+      width: 1280,
+      height: 720,
       fps: 24,
       frames: 480,
     },
